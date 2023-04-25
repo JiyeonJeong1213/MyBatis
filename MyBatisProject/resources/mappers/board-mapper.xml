@@ -7,15 +7,20 @@
   	type이 Board인 resultMap하나 생성하고
   	select id값이 selectListCount, selectList 태그 2개 만들기
    -->
-   
 	<resultMap type="board" id="boardResultMap">
-		<result column="BOARD_NO" property="boardNo"/>
+		<id column="BOARD_NO" property="boardNo"/> <!-- result태그랑 기능은 똑같은데 PK값이라고 알려주려고 id태그 씀 -->
 		<result column="BOARD_TITLE" property="boardTitle"/>
 		<result column="BOARD_CONTENT" property="boardContent"/>
-		<result column="BOARD_WRITER" property="boardWriter"/>
+		<result column="USER_NAME" property="boardWriter"/>
 		<result column="COUNT" property="count"/>
 		<result column="CREATE_DATE" property="createDate"/>
 		<result column="STATUS" property="status"/>
+		<collection property="replyList" resultMap="replyResultMap"/>
+	</resultMap>
+	<resultMap type="Reply" id="replyResultMap">
+		<result column="USER_NAME" property="replyWriter"/>
+		<result column="REPLY_CONTENT" property="replyContent"/>
+		<result column="CREATE_DATE" property="createDate"/>
 	</resultMap>
 	
 	<select id="selectListCount" resultType="int">
@@ -23,10 +28,77 @@
 		FROM BOARD
 		WHERE STATUS = 'Y'
 	</select>
-	
 	<select id="selectList" resultMap="boardResultMap">
 		SELECT *
+		FROM BOARD B
+		JOIN MEMBER ON (BOARD_WRITER = USER_NO)
+		WHERE B.STATUS = 'Y'
+		ORDER BY BOARD_NO DESC
+	</select>
+	
+	<update id="increaseCount" parameterType="int">
+		UPDATE BOARD
+		SET COUNT = COUNT+1
+		WHERE BOARD_NO = #{boardNo}
+		  AND STATUS = 'Y'
+	</update>
+	<select id="selectBoard" parameterType="int" resultMap="boardResultMap">
+		SELECT *
+		FROM BOARD B
+		JOIN MEMBER ON (BOARD_WRITER = USER_NO)
+		LEFT JOIN REPLY R ON (BOARD_NO = REF_BNO)
+		WHERE B.STATUS = 'Y'
+		  AND BOARD_NO = #{boardNo}
+		ORDER BY R.CREATE_DATE DESC
+	</select>
+	<select id="selectReplyList" parameterType="int" resultMap="replyResultMap">
+		SELECT *
+		FROM REPLY R
+		JOIN MEMBER ON (REPLY_WRITER = USER_NO)
+		WHERE REF_BNO = #{boardNo}
+		  AND R.STATUS = 'Y'
+		ORDER BY CREATE_DATE DESC
+	</select>
+	
+	<select id="selectSearchListCount" parameterType="hashmap" resultType="int">
+		SELECT COUNT(*)
 		FROM BOARD
 		WHERE STATUS = 'Y'
+		  <if test='condition == "writer"'>
+		  	AND BOARD_WRITER = (SELECT USER_NO
+		  						FROM MEMBER
+		  						WHERE USER_NAME LIKE #{keyword}) 
+		  </if>
+		  <if test='condition == "title"'>
+		  	AND BOARD_TITLE LIKE #{keyword}
+		  </if>
+		  <if test='condition=="content"'>
+		  	AND BOARD_CONTENT LIKE #{keyword}
+		  </if>
+	</select>
+	<select id="selectSearchList" parameterType="hashmap" resultMap="boardResultMap">
+		SELECT 
+				BOARD_NO,
+				BOARD_TITLE,
+				USER_NAME,
+				COUNT,
+				CREATE_DATE
+		FROM BOARD B
+		JOIN MEMBER ON (BOARD_WRITER = USER_NO)
+		WHERE B.STATUS = 'Y'
+		  <choose>
+		  	<when test="condition == 'writer'">
+		  		AND USER_NAME
+		  	</when>
+		  	<when test="condition == 'title'">
+		  		AND BOARD_TITLE
+		  	</when>
+		  	<otherwise>
+		  		AND BOARD_CONTENT
+		  	</otherwise>
+		  </choose>
+		  LIKE CONCAT(CONCAT('%',#{keyword}), '%')
+		  <!-- LIKE '%' || #{keyword} || '%' -->
+		ORDER BY BOARD_NO DESC
 	</select>
 </mapper>

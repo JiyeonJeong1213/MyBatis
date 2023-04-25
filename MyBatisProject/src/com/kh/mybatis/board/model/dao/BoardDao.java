@@ -1,11 +1,13 @@
 package com.kh.mybatis.board.model.dao;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
 import com.kh.mybatis.board.model.vo.Board;
+import com.kh.mybatis.board.model.vo.Reply;
 import com.kh.mybatis.common.model.vo.PageInfo;
 
 public class BoardDao {
@@ -13,7 +15,6 @@ public class BoardDao {
 	public int selectListCount(SqlSession sqlSession) {
 		return sqlSession.selectOne("boardMapper.selectListCount");
 	}
-	
 	public ArrayList<Board> selectList(SqlSession sqlSession, PageInfo pi){
 		//sqlSession.selectList("boardMapper.selectList", pi);
 		
@@ -30,10 +31,31 @@ public class BoardDao {
 		int limit = pi.getBoardLimit();
 		int offset = (pi.getCurrentPage()-1)*limit;
 		
-		RowBounds rowBounds = new RowBounds(offset, limit); // 조회할 데이터가 얼마 없을 때 RowBounds쓰면 좋음
+		RowBounds rowBounds = new RowBounds(offset, limit); // 조회할 데이터가 얼마 없을 때 RowBounds쓰면 좋음. 많을 때는 Rownum쓰는 게 좋음
 		// RowBounds객체를 넘겨줘야하는 경우,selectList함수의 오버로딩된 메소드 중 매개변수가 3개인 메소드를 사용해야 함
 		// 딱히 두번째 자리에 파라미터로 넘길 값이 없더라도 null값이라도 넘겨줘야 함
 		
 		return (ArrayList) sqlSession.selectList("boardMapper.selectList", null , rowBounds);
+	}
+	
+	public int increaseCount(SqlSession sqlSession, int boardNo) {
+		return sqlSession.update("boardMapper.increaseCount", boardNo);
+	}
+	public Board selectBoard(SqlSession sqlSession, int boardNo) {
+		return sqlSession.selectOne("boardMapper.selectBoard", boardNo);
+	}
+	public ArrayList<Reply> selectReplyList(SqlSession sqlSession, int boardNo){
+		return (ArrayList)sqlSession.selectList("boardMapper.selectReplyList", boardNo);
+	}
+	
+	public int selectSearchListCount(SqlSession sqlSession, HashMap map) {
+		return sqlSession.selectOne("boardMapper.selectSearchListCount", map);
+	}
+	public ArrayList<Board> selectSearchList(SqlSession sqlSession, HashMap map, PageInfo pi){
+		int limit = pi.getBoardLimit();
+		int offset = (pi.getCurrentPage()-1)*limit;
+		RowBounds rowBounds = new RowBounds(offset, limit);
+		
+		return (ArrayList)sqlSession.selectList("boardMapper.selectSearchList", map, rowBounds);
 	}
 }
